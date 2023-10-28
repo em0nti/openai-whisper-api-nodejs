@@ -1,5 +1,6 @@
 {
 	"name": "openai-whisper-api-nodejs",
+	"type": "module",
 	"scripts": {
 		"start": "NODE_ENV=production node ./app.js",
 		"start:dev": "NODE_ENV=development node --watch  ./app.js",
@@ -8,6 +9,7 @@
 	},
 	"dependencies": {
 		"axios": "^1.4.0",
-		"dotenv": "^16.3.1"
+		"dotenv": "^16.3.1",
+		"openai": "^4.11.1"
 	}
 }
