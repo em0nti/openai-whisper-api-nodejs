@@ -1,46 +1,66 @@
+#!usr/bin/env node
+
+import { Command } from 'commander';
 import 'dotenv/config';
 import openai from './api/config-openai-official.js';
 import path from 'path';
 import fs from 'fs';
 
-const sourceDirPath = path.resolve('../source');
-const outputDirPath = path.resolve('../texts');
-const filename = 'part_20min_3_interview-007';
-const audioFilePath = path.join(sourceDirPath, `${filename}.mp3`);
-const textFilePath = path.join(outputDirPath, `${filename}.txt`);
+const program = new Command();
+const transcribeCommand = program.command('transcribe');
+transcribeCommand.description('CLI tool for transcribing multi-speaker audio files').version('1.0.0');
 
-// Write the text to a file
-const writeTextToFile = text => {
-	fs.writeFile(textFilePath, text, err => {
-		if (err) {
-			console.error('An error occurred:', err);
-		} else {
-			console.log('Text written to file successfully.');
-		}
+// Define the command syntax, including the required audio file path argument
+// and the optional --lang and --format flags
+transcribeCommand
+	.argument('<audio-file-path>', 'Path to the audio file to be transcribed')
+	.option('--lang <language>', 'Set the language of the audio content', 'en')
+	.option('--format <format>', 'Define the output format of the transcription', 'txt')
+	.action((audioFilePath, options) => {
+		const source = path.resolve(audioFilePath)
+		// This is where you will handle the transcription logic
+		console.log(`Transcribing file: ${audioFilePath}`);
+		console.log(`Language: ${options.lang}`);
+		console.log(`Format: ${options.format}`);
+		
+
+		// Here, you would add the code to validate the audio file path and call the transcription function
 	});
-};
 
-async function main() {
-	// const file = fs.createReadStream('audio.mp3');
-	// const transcript = await transcribe(file);
+// Parse the command-line arguments
+program.parse(process.argv);
 
-	// console.log(transcript);
-	console.log('app.js is running');
+// const sourceDirPath = path.resolve('../source');
+// const outputDirPath = path.resolve('../texts');
+// const filename = 'audio1986539416';
+// const audioFilePath = path.join(sourceDirPath, `${filename}.m4a`);
+// const textFilePath = path.join(outputDirPath, `${filename}.txt`);
 
-	try {
-		const transcription = await openai.audio.transcriptions.create({
-			file: fs.createReadStream(audioFilePath),
-			model: 'whisper-1',
-			language: 'uk',
-			prompt: '',
-			response_format: 'text',
-		});
+// // Write the text to a file
+// const writeTextToFile = text => {
+// 	fs.writeFile(textFilePath, text, err => {
+// 		if (err) {
+// 			console.error('An error occurred:', err);
+// 		} else {
+// 			console.log('Text written to file successfully.');
+// 		}
+// 	});
+// };
 
-		writeTextToFile(transcription);
-	} catch (error) {
-		console.log(error.message);
-		process.exit(1);
-	}
-}
+// async function transcribe(audioFilePath,lang,format) {
 
-main();
+// 	try {
+// 		const transcription = await openai.audio.transcriptions.create({
+// 			file: fs.createReadStream(audioFilePath),
+// 			model: 'whisper-1',
+// 			language: lang,
+// 			prompt: '',
+// 			response_format: format,
+// 		});
+
+// 		writeTextToFile(transcription);
+// 	} catch (error) {
+// 		console.log(error.message);
+// 		process.exit(1);
+// 	}
+// }
