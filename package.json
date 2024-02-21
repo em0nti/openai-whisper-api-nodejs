@@ -1,6 +1,8 @@
 {
 	"name": "ttalk",
 	"type": "module",
+	"preferGlobal": true,
+	"bin": "./app.js",
 	"version": "1.0.0",
 	"description": "TranscribeTalk CLI - transcribing interviews with 2 or more speakers.",
 	"main": "app.js",
