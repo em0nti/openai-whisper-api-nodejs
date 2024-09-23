@@ -44,7 +44,7 @@ program.parse(process.argv);
 const writeTextToFile = (text, destinationPath) => {
 	fs.writeFile(destinationPath, text, err => {
 		if (err) {
-			console.error('An error occurred:', err);
+			console.error('An error occurred when write ext to file:', err);
 		} else {
 			console.log('Text written to file successfully.');
 		}
@@ -52,7 +52,7 @@ const writeTextToFile = (text, destinationPath) => {
 };
 
 async function whisperTranscribe(audioFilePath, outputPath, lang, format) {
-	const prompt = '';
+	const prompt = 'Товариство Червоного Хреста України,ТЧХУ,БРАВО, САФ, БОКА.!?-';
 	try {
 		console.log('Start transcribing...');
 		const transcription = await openai.audio.transcriptions.create({
