@@ -8,7 +8,7 @@ import fs from 'fs';
 
 const program = new Command();
 const transcribe = program.command('transcribe');
-transcribe.description('CLI tool for transcribing multi-speaker audio files').version('1.0.0');
+transcribe.description('CLI tool for transcribing multi-speaker audio files').version('2.0.0');
 
 // Define the command syntax, including the required audio file path argument
 // and the optional --lang and --format flags
