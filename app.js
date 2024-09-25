@@ -3,14 +3,9 @@
 import { Command } from 'commander';
 import fs from 'fs';
 import path from 'path';
-import dotenv from 'dotenv';
-import ffmpeg from 'fluent-ffmpeg';
-import ffmpegPath from 'ffmpeg-static';
 import ProgressBar from 'progress';
-
-dotenv.config();
-
-ffmpeg.setFfmpegPath(ffmpegPath);
+import openai from './api/config-openai-official.js';
+import { convertAudio, splitAudio } from './helpers/audio-processing.js';
 
 // Create a new Command instance
 const program = new Command();
@@ -21,128 +16,25 @@ program
 	.option('--lang <language>', 'Set the language of the audio content', 'uk')
 	.option('--format <format>', 'Define the output format of the transcription', 'text')
 	.action(async (audioFilePath, outputPath, options) => {
-		const convertedFilePath = 'converted.wav';
-		const outputFilePath = outputPath || 'transcription.txt';
-
-		// Function to convert audio to the correct format
-		async function convertAudio(inputPath, outputPath) {
-			return new Promise((resolve, reject) => {
-				ffmpeg(inputPath)
-					.outputOptions([
-						'-ar 16000', // Set audio sampling rate to 16 kHz
-						'-ac 1', // Set number of audio channels to 1 (mono)
-						'-f wav', // Output format
-					])
-					.save(outputPath)
-					.on('end', () => {
-						console.log('Audio conversion complete.');
-						resolve();
-					})
-					.on('error', err => {
-						console.error('Error converting audio:', err);
-						reject(err);
-					});
-			});
-		}
-
-		// Function to get the duration of an audio file
-		function getAudioDuration(filePath) {
-			return new Promise((resolve, reject) => {
-				ffmpeg.ffprobe(filePath, (err, metadata) => {
-					if (err) {
-						return reject(err);
-					}
-					const duration = metadata.format.duration;
-					resolve(duration);
-				});
-			});
-		}
-
-		// Function to split audio into chunks if necessary
-		async function splitAudio(inputPath) {
-			const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25 MB in bytes
-
-			// Get the file size
-			const stats = fs.statSync(inputPath);
-			const fileSize = stats.size;
-
-			if (fileSize <= MAX_FILE_SIZE) {
-				// No need to split
-				return [inputPath];
-			} else {
-				// Need to split the audio
-				const duration = await getAudioDuration(inputPath);
-
-				// Calculate number of chunks needed
-				const numChunks = Math.ceil(fileSize / MAX_FILE_SIZE);
-
-				// Calculate chunk duration
-				const chunkDuration = duration / numChunks;
-
-				// Generate chunk file paths
-				const chunkFilePaths = [];
-
-				for (let i = 0; i < numChunks; i++) {
-					const startTime = i * chunkDuration;
-					const outputPath = `chunk_${i}.wav`;
-					chunkFilePaths.push(outputPath);
-
-					await new Promise((resolve, reject) => {
-						ffmpeg(inputPath)
-							.seekInput(startTime)
-							.duration(chunkDuration + 1) // Add 1 second to ensure overlap
-							.output(outputPath)
-							.on('end', resolve)
-							.on('error', reject)
-							.run();
-					});
-				}
-
-				return chunkFilePaths;
-			}
-		}
+		const convertedFilePath = './converted.mp3';
+		const outputFilePath = outputPath || './transcription.txt';
 
 		// Function to transcribe audio using OpenAI Whisper API via OpenAI SDK
 		async function transcribeAudio(filePath, language) {
 			try {
-				const response = await openai.createTranscription(
-					fs.createReadStream(filePath),
-					'whisper-1',
-					null, // Prompt (optional)
-					'verbose_json', // Response format
-					0, // Temperature
-					language // Language code
-				);
-				return response.data;
+				const response = await openai.audio.transcriptions.create({
+					file: fs.createReadStream(filePath),
+					model: 'whisper-1',
+					prompt: '', // Prompt (optional)
+					response_format: 'verbose_json', // Response format
+					temperature: 0,
+					language: language,
+				});
+				return response;
 			} catch (error) {
 				console.error('Error during transcription:', error.response?.data || error.message);
 				throw error;
 			}
-		}
-
-		// Function to detect speaker changes based on pauses in the transcript
-		function identifySpeakers(transcript) {
-			const segments = transcript.segments;
-			let speaker = 1;
-			let lastEndTime = 0;
-			const output = [];
-
-			segments.forEach(segment => {
-				const pauseDuration = segment.start - lastEndTime;
-				if (pauseDuration > 1.0) {
-					// Assume speaker changes if pause is greater than 1 second
-					speaker = speaker === 1 ? 2 : 1;
-				}
-				output.push({
-					speaker: `Speaker ${speaker}`,
-					start: segment.start,
-					end: segment.end,
-					text: segment.text.trim(),
-				});
-				lastEndTime = segment.end;
-			});
-
-			return output;
 		}
 
 		// Main transcription process
@@ -162,8 +54,7 @@ program
 				let fullTranscription = [];
 				for (const chunk of audioChunks) {
 					const transcription = await transcribeAudio(chunk, options.lang);
-					const identifiedSpeakers = identifySpeakers(transcription);
-					fullTranscription = fullTranscription.concat(identifiedSpeakers);
+					fullTranscription = fullTranscription.concat(transcription);
 					progressBar.tick();
 
 					// Delete the chunk file to save space
@@ -171,7 +62,7 @@ program
 				}
 
 				// Delete the converted file
-				fs.unlinkSync(convertedFilePath);
+				//fs.unlinkSync(convertedFilePath);
 
 				// Step 4: Output the transcription
 				if (options.format === 'json') {
