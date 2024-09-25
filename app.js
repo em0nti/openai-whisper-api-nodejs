@@ -16,8 +16,8 @@ program
 	.option('--lang <language>', 'Set the language of the audio content', 'uk')
 	.option('--format <format>', 'Define the output format of the transcription', 'text')
 	.action(async (audioFilePath, outputPath, options) => {
-		const convertedFilePath = './converted.mp3';
-		const outputFilePath = outputPath || './transcription.txt';
+		const convertedFilePath = './temp/converted.mp3';
+		const outputFilePath = outputPath || './temp/transcription.txt';
 
 		// Function to transcribe audio using OpenAI Whisper API via OpenAI SDK
 		async function transcribeAudio(filePath, language) {
