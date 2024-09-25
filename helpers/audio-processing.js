@@ -66,7 +66,7 @@ export async function splitAudio(inputPath) {
 
 		for (let i = 0; i < numChunks; i++) {
 			const startTime = i * chunkDuration;
-			const outputPath = `chunk_${i}.mp3`;
+			const outputPath = `./temp/chunk_${i}.${AUDIO_OUTPUT_OPTIONS.FORMAT}`;
 			chunkFilePaths.push(outputPath);
 
 			await new Promise((resolve, reject) => {

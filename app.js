@@ -62,7 +62,7 @@ program
 				}
 
 				// Delete the converted file
-				//fs.unlinkSync(convertedFilePath);
+				fs.unlinkSync(convertedFilePath);
 
 				// Step 4: Output the transcription
 				if (options.format === 'json') {
