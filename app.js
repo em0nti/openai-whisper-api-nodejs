@@ -4,7 +4,7 @@ import { Command } from 'commander';
 import fs from 'fs';
 import path from 'path';
 import ProgressBar from 'progress';
-import openai from './api/config-openai-official.js';
+import { transcribeAudio } from './api/transcribe.js';
 import { convertAudio, splitAudio } from './helpers/audio-processing.js';
 
 // Create a new Command instance
@@ -18,24 +18,6 @@ program
 	.action(async (audioFilePath, outputPath, options) => {
 		const convertedFilePath = './temp/converted.mp3';
 		const outputFilePath = outputPath || './temp/transcription.txt';
-
-		// Function to transcribe audio using OpenAI Whisper API via OpenAI SDK
-		async function transcribeAudio(filePath, language, format) {
-			try {
-				const response = await openai.audio.transcriptions.create({
-					file: fs.createReadStream(filePath),
-					model: 'whisper-1',
-					prompt: '', // Prompt (optional)
-					response_format: format, // Response format
-					temperature: 0,
-					language: language,
-				});
-				return response;
-			} catch (error) {
-				console.error('Error during transcription:', error.response?.data || error.message);
-				throw error;
-			}
-		}
 
 		// Main transcription process
 		async function main() {
