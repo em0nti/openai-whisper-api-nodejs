@@ -74,6 +74,7 @@ export async function splitAudio(inputPath) {
 					.seekInput(startTime)
 					.duration(chunkDuration + 1) // Add 1 second to ensure overlap
 					.outputOptions([
+						`-b:a ${AUDIO_OUTPUT_OPTIONS.BITRATE}`,
 						`-f ${AUDIO_OUTPUT_OPTIONS.FORMAT}`, // Output format
 					])
 					.output(outputPath)
