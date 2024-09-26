@@ -20,13 +20,13 @@ program
 		const outputFilePath = outputPath || './temp/transcription.txt';
 
 		// Function to transcribe audio using OpenAI Whisper API via OpenAI SDK
-		async function transcribeAudio(filePath, language) {
+		async function transcribeAudio(filePath, language, format) {
 			try {
 				const response = await openai.audio.transcriptions.create({
 					file: fs.createReadStream(filePath),
 					model: 'whisper-1',
 					prompt: '', // Prompt (optional)
-					response_format: 'verbose_json', // Response format
+					response_format: format, // Response format
 					temperature: 0,
 					language: language,
 				});
@@ -53,7 +53,7 @@ program
 
 				let fullTranscription = [];
 				for (const chunk of audioChunks) {
-					const transcription = await transcribeAudio(chunk, options.lang);
+					const transcription = await transcribeAudio(chunk, options.lang, options.format);
 					fullTranscription = fullTranscription.concat(transcription);
 					progressBar.tick();
 
@@ -62,32 +62,18 @@ program
 				}
 
 				// Delete the converted file
-				fs.unlinkSync(convertedFilePath);
+				if (fs.existsSync(convertedFilePath)) {
+					fs.unlinkSync(convertedFilePath);
+				}
 
 				// Step 4: Output the transcription
-				if (options.format === 'json') {
-					fs.writeFileSync(outputFilePath, JSON.stringify(fullTranscription, null, 2), 'utf8');
-				} else if (options.format === 'srt') {
-					const srtContent = fullTranscription
-						.map((entry, index) => {
-							const startTime = new Date(entry.start * 1000)
-								.toISOString()
-								.substr(11, 12)
-								.replace('.', ',');
-							const endTime = new Date(entry.end * 1000).toISOString().substr(11, 12).replace('.', ',');
-							return `${index + 1}\n${startTime} --> ${endTime}\n${entry.speaker}: ${entry.text}\n`;
-						})
-						.join('\n');
-					fs.writeFileSync(outputFilePath, srtContent, 'utf8');
-				} else {
-					// Default to plain text format
-					const textContent = fullTranscription
-						.map(entry => {
-							return `${entry.speaker}: ${entry.text}`;
-						})
-						.join('\n');
-					fs.writeFileSync(outputFilePath, textContent, 'utf8');
-				}
+
+				const content = fullTranscription
+					.map(entry => {
+						return `${entry}`;
+					})
+					.join('\n');
+				fs.writeFileSync(outputFilePath, content, 'utf8');
 
 				console.log(`Transcription complete. Output saved to ${outputFilePath}`);
 			} catch (error) {
