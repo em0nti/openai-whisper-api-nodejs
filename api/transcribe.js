@@ -3,7 +3,8 @@ import openai from './config-openai-official.js';
 
 // Function to transcribe audio using OpenAI Whisper API via OpenAI SDK
 export async function transcribeAudio(filePath, language, format) {
-	const prompt = 'Товариство Червоного Хреста України,ТЧХУ,БРАВО, САФ, БОКА.!?-';
+	const prompt =
+		'Червоний Хрест, Товариство Червоного Хреста України,ТЧХУ, обласна організація, НацКом, НацКомом, Національний комітет, міжрегіональні офіси, МРО, місцеві, беніфіціари, ризики, безпека, Тернопіль, Тернопільська обласна організація. офіси!?-';
 	try {
 		const response = await openai.audio.transcriptions.create({
 			file: fs.createReadStream(filePath),
