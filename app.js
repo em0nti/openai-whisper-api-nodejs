@@ -52,7 +52,7 @@ const writeTextToFile = (text, destinationPath) => {
 };
 
 async function whisperTranscribe(audioFilePath, outputPath, lang, format) {
-	const prompt = 'Товариство Червоного Хреста України,ТЧХУ,МРО, міжрегіональний, офіс.-';
+	const prompt = '';
 	try {
 		console.log('Start transcribing...');
 		const transcription = await openai.audio.transcriptions.create({
