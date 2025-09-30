@@ -65,13 +65,29 @@ node app.js transcribe <audio-file-path> --format srt
 - See `.env.example` for template
 
 ### Whisper API Integration
-The transcription is handled by the `whisperTranscribe()` function in app.js:54, which:
+The transcription is handled by the `whisperTranscribe()` function in app.js:75, which:
 - Accepts audio file path, output path, language, and format parameters
-- Uses OpenAI's `whisper-1` model
-- Supports a `prompt` parameter (currently empty string at app.js:55) for guiding transcription
+- Uses OpenAI's `gpt-4o-transcribe` model
+- Automatically splits audio files larger than 25MB into chunks (see Audio Splitting below)
+- Supports a `prompt` parameter (currently empty string) for guiding transcription
 - Writes output to file using the specified format
+
+### Audio Splitting for Large Files
+Files larger than 25MB are automatically split to comply with OpenAI API limits:
+- **utils/audioSplitter.js**: Utility module for handling large audio files
+- Uses FFmpeg's `silencedetect` filter to find natural break points between sentences
+- Splits at silence periods nearest to 20MB chunks (with 5MB safety margin)
+- Processes each chunk separately and concatenates results
+- Automatically cleans up temporary chunk files after transcription
+- Key functions:
+  - `detectSilence()`: Finds silence periods in audio using FFmpeg
+  - `calculateSplitPoints()`: Determines optimal split points based on file size and silence
+  - `splitAudioFile()`: Creates audio chunks at specified time points
+  - `splitAudioIfNeeded()`: Main function that orchestrates the splitting process
+  - `cleanupChunks()`: Removes temporary chunk files
 
 ### Output Format
 - Default format is 'text' which saves as `.txt`
 - Other formats (json, srt, verbose_json, vtt) save with their respective extensions
 - Output files are named after the input audio file with the appropriate extension
+- For split files, chunk transcriptions are automatically concatenated

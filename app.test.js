@@ -3,6 +3,16 @@ import { writeTextToFile, whisperTranscribe } from './app.js';
 import fs from 'fs';
 import openai from './api/config-openai-official.js';
 
+// Mock the audioSplitter module
+vi.mock('./utils/audioSplitter.js', () => ({
+	splitAudioIfNeeded: vi.fn(async (path) => ({
+		chunks: [path],
+		wasSplit: false,
+		originalFile: path
+	})),
+	cleanupChunks: vi.fn(async () => {})
+}));
+
 // Mock the fs module
 vi.mock('fs', () => ({
 	default: {

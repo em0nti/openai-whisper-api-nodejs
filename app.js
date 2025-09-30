@@ -5,6 +5,7 @@ import 'dotenv/config';
 import openai from './api/config-openai-official.js';
 import path from 'path';
 import fs from 'fs';
+import { splitAudioIfNeeded, cleanupChunks } from './utils/audioSplitter.js';
 
 const program = new Command();
 const transcribe = program.command('transcribe');
@@ -53,19 +54,60 @@ export const writeTextToFile = (text, destinationPath) => {
 	});
 };
 
-export async function whisperTranscribe(audioFilePath, outputPath, lang, format) {
+/**
+ * Transcribes a single audio chunk
+ */
+async function transcribeChunk(audioFilePath, lang, format) {
 	const prompt = '';
+	const transcription = await openai.audio.transcriptions.create({
+		file: fs.createReadStream(audioFilePath),
+		model: 'gpt-4o-transcribe',
+		language: lang,
+		prompt: prompt,
+		response_format: format,
+	});
+	return transcription;
+}
+
+/**
+ * Main transcription function with automatic audio splitting for large files
+ */
+export async function whisperTranscribe(audioFilePath, outputPath, lang, format) {
 	try {
 		console.log('Start transcribing...');
-		const transcription = await openai.audio.transcriptions.create({
-			file: fs.createReadStream(audioFilePath),
-			model: 'gpt-4o-transcribe',
-			language: lang,
-			prompt: prompt,
-			response_format: format,
-		});
 
-		writeTextToFile(transcription, outputPath);
+		// Split audio if needed (files larger than 25MB)
+		const { chunks, wasSplit, originalFile } = await splitAudioIfNeeded(audioFilePath);
+
+		let finalTranscription = '';
+
+		if (wasSplit) {
+			console.log(`Processing ${chunks.length} chunks...`);
+
+			// Transcribe each chunk
+			for (let i = 0; i < chunks.length; i++) {
+				console.log(`Transcribing chunk ${i + 1}/${chunks.length}...`);
+				const chunkTranscription = await transcribeChunk(chunks[i], lang, format);
+
+				// For text format, concatenate with spacing
+				if (format === 'text') {
+					finalTranscription += (i > 0 ? ' ' : '') + chunkTranscription;
+				} else {
+					// For other formats (json, srt, etc.), need special handling
+					// For now, we'll store them separately or merge them
+					finalTranscription += chunkTranscription + '\n';
+				}
+			}
+
+			// Clean up temporary chunk files
+			await cleanupChunks(chunks, originalFile);
+		} else {
+			// Single file transcription (original behavior)
+			finalTranscription = await transcribeChunk(audioFilePath, lang, format);
+		}
+
+		writeTextToFile(finalTranscription, outputPath);
+		console.log('Transcription complete!');
 	} catch (error) {
 		console.log(error.message);
 		process.exit(1);
