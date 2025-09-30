@@ -57,7 +57,7 @@ async function whisperTranscribe(audioFilePath, outputPath, lang, format) {
 		console.log('Start transcribing...');
 		const transcription = await openai.audio.transcriptions.create({
 			file: fs.createReadStream(audioFilePath),
-			model: 'whisper-1',
+			model: 'gpt-4o-transcribe',
 			language: lang,
 			prompt: prompt,
 			response_format: format,
