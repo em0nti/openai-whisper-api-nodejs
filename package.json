@@ -12,12 +12,20 @@
 		"start": "NODE_ENV=production node ./app.js",
 		"start:dev": "NODE_ENV=development node --watch  ./app.js",
 		"lint": "eslint **/*.js",
-		"lint:fix": "eslint --fix **/*.js"
+		"lint:fix": "eslint --fix **/*.js",
+		"test": "vitest run",
+		"test:watch": "vitest",
+		"test:ui": "vitest --ui",
+		"test:coverage": "vitest run --coverage"
 	},
 	"dependencies": {
 		"axios": "^1.6.7",
 		"commander": "^12.0.0",
 		"dotenv": "^16.4.5",
 		"openai": "^4.28.4"
+	},
+	"devDependencies": {
+		"@vitest/ui": "^3.2.4",
+		"vitest": "^3.2.4"
 	}
 }

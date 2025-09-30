@@ -37,11 +37,13 @@ transcribe
 		whisperTranscribe(absoluteAudioFilePath, textFilePath, options.lang, options.format);
 	});
 
-// Parse the command-line arguments
-program.parse(process.argv);
+// Parse the command-line arguments only if this file is run directly
+if (import.meta.url === `file://${process.argv[1]}`) {
+	program.parse(process.argv);
+}
 
 // Write the text to a file
-const writeTextToFile = (text, destinationPath) => {
+export const writeTextToFile = (text, destinationPath) => {
 	fs.writeFile(destinationPath, text, err => {
 		if (err) {
 			console.error('An error occurred when write ext to file:', err);
@@ -51,7 +53,7 @@ const writeTextToFile = (text, destinationPath) => {
 	});
 };
 
-async function whisperTranscribe(audioFilePath, outputPath, lang, format) {
+export async function whisperTranscribe(audioFilePath, outputPath, lang, format) {
 	const prompt = '';
 	try {
 		console.log('Start transcribing...');
