@@ -40,6 +40,15 @@ node app.js transcribe <audio-file-path> --lang en
 # With format option (default: 'text')
 # Supported formats: text, json, srt, verbose_json, vtt
 node app.js transcribe <audio-file-path> --format srt
+
+# With model option (default: 'gpt-4o-transcribe')
+# Supported models: gpt-4o-transcribe, gpt-4o-mini-transcribe, whisper-1
+node app.js transcribe <audio-file-path> --model whisper-1
+
+# With chunk duration (optional) - splits audio into chunks of specified duration
+# Duration is in seconds. If not specified, audio is not split.
+node app.js transcribe <audio-file-path> --chunk-duration 600  # 10 minutes per chunk
+node app.js transcribe <audio-file-path> --chunk-duration 1200 # 20 minutes per chunk
 ```
 
 ## Architecture
@@ -65,26 +74,30 @@ node app.js transcribe <audio-file-path> --format srt
 - See `.env.example` for template
 
 ### Whisper API Integration
-The transcription is handled by the `whisperTranscribe()` function in app.js:75, which:
-- Accepts audio file path, output path, language, and format parameters
-- Uses OpenAI's `gpt-4o-transcribe` model
-- Automatically splits audio files larger than 25MB into chunks (see Audio Splitting below)
+The transcription is handled by the `whisperTranscribe()` function in app.js:81, which:
+- Accepts audio file path, output path, language, format, model, and optional chunk duration parameters
+- Uses OpenAI's `gpt-4o-transcribe` model by default (configurable via --model option)
+- Optionally splits audio files into chunks of specified duration (see Audio Chunking below)
 - Supports a `prompt` parameter (currently empty string) for guiding transcription
 - Writes output to file using the specified format
 
-### Audio Splitting for Large Files
-Files larger than 25MB are automatically split to comply with OpenAI API limits:
-- **utils/audioSplitter.js**: Utility module for handling large audio files
+### Audio Chunking (Optional)
+Users can optionally split long audio files into smaller chunks using the `--chunk-duration` option:
+- **utils/audioSplitter.js**: Utility module for handling audio chunking
 - Uses FFmpeg's `silencedetect` filter to find natural break points between sentences
-- Splits at silence periods nearest to 20MB chunks (with 5MB safety margin)
+- Splits audio at silence periods nearest to the specified chunk duration
+- If no silence is found within ±30 seconds of target, splits at the exact duration point
 - Processes each chunk separately and concatenates results
 - Automatically cleans up temporary chunk files after transcription
 - Key functions:
   - `detectSilence()`: Finds silence periods in audio using FFmpeg
-  - `calculateSplitPoints()`: Determines optimal split points based on file size and silence
+  - `getAudioDuration()`: Gets the total duration of the audio file
+  - `calculateSplitPoints()`: Determines optimal split points based on chunk duration and silence
   - `splitAudioFile()`: Creates audio chunks at specified time points
-  - `splitAudioIfNeeded()`: Main function that orchestrates the splitting process
+  - `splitAudioIfNeeded()`: Main function that orchestrates the splitting process (only if chunk duration specified)
   - `cleanupChunks()`: Removes temporary chunk files
+
+**Note**: Audio splitting is entirely optional and only occurs when the `--chunk-duration` option is provided. Without this option, the entire audio file is transcribed as a single unit.
 
 ### Output Format
 - Default format is 'text' which saves as `.txt`

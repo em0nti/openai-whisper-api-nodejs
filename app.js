@@ -19,6 +19,7 @@ transcribe
 	.option('--lang <language>', 'Set the language of the audio content', 'uk')
 	.option('--format <format>', 'Define the output format of the transcription', 'text')
 	.option('--model <model>', 'Set the transcription model (gpt-4o-transcribe, gpt-4o-mini-transcribe, whisper-1)', 'gpt-4o-transcribe')
+	.option('--chunk-duration <seconds>', 'Split audio into chunks of specified duration in seconds (optional)', parseFloat)
 	.action((audioFilePath, outputPath, options) => {
 		const absoluteAudioFilePath = path.resolve(audioFilePath);
 		const audioFileExtName = path.extname(audioFilePath);
@@ -36,8 +37,11 @@ transcribe
 		console.log(`Language: ${options.lang}`);
 		console.log(`Format: ${options.format}`);
 		console.log(`Model: ${options.model}`);
+		if (options.chunkDuration) {
+			console.log(`Chunk duration: ${options.chunkDuration} seconds`);
+		}
 
-		whisperTranscribe(absoluteAudioFilePath, textFilePath, options.lang, options.format, options.model);
+		whisperTranscribe(absoluteAudioFilePath, textFilePath, options.lang, options.format, options.model, options.chunkDuration);
 	});
 
 // Parse the command-line arguments only if this file is run directly
@@ -72,14 +76,14 @@ async function transcribeChunk(audioFilePath, lang, format, model) {
 }
 
 /**
- * Main transcription function with automatic audio splitting for large files
+ * Main transcription function with optional duration-based audio chunking
  */
-export async function whisperTranscribe(audioFilePath, outputPath, lang, format, model) {
+export async function whisperTranscribe(audioFilePath, outputPath, lang, format, model, chunkDuration) {
 	try {
 		console.log('Start transcribing...');
 
-		// Split audio if needed (files larger than 25MB)
-		const { chunks, wasSplit, originalFile } = await splitAudioIfNeeded(audioFilePath);
+		// Split audio if chunk duration is specified
+		const { chunks, wasSplit, originalFile } = await splitAudioIfNeeded(audioFilePath, chunkDuration);
 
 		let finalTranscription = '';
 

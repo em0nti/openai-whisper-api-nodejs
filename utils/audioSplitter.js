@@ -9,13 +9,7 @@ import { promisify } from 'util';
 ffmpeg.setFfmpegPath(ffmpegInstaller.path);
 ffmpeg.setFfprobePath(ffprobeInstaller.path);
 
-const stat = promisify(fs.stat);
 const unlink = promisify(fs.unlink);
-
-const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25 MB in bytes
-const TARGET_CHUNK_SIZE = 20 * 1024 * 1024; // 20 MB target (safety margin)
-const MAX_DURATION = 1400; // 1400 seconds (~23 minutes) - OpenAI API limit
-const TARGET_DURATION = 1200; // 1200 seconds (~20 minutes) - target with safety margin
 
 /**
  * Detects silence periods in an audio file using FFmpeg's silencedetect filter
@@ -78,35 +72,18 @@ export async function getAudioDuration(audioFilePath) {
 }
 
 /**
- * Calculates optimal split points based on file size and silence periods
- * @param {string} audioFilePath - Path to the audio file
+ * Calculates optimal split points based on desired chunk duration and silence periods
  * @param {Array} silencePeriods - Array of detected silence periods
  * @param {number} duration - Total duration of the audio file
- * @returns {Promise<Array>} Array of split points (timestamps in seconds)
+ * @param {number} chunkDuration - Desired duration per chunk in seconds
+ * @returns {Array} Array of split points (timestamps in seconds)
  */
-export async function calculateSplitPoints(audioFilePath, silencePeriods, duration) {
-	const fileStats = await stat(audioFilePath);
-	const fileSize = fileStats.size;
-
-	// Check if splitting is needed based on file size OR duration
-	const needsSplitting = fileSize > MAX_FILE_SIZE || duration > MAX_DURATION;
-
-	if (!needsSplitting) {
-		return []; // No splitting needed
-	}
-
-	// Calculate target duration per chunk based on both file size and duration constraints
-	const bytesPerSecond = fileSize / duration;
-	const durationBasedChunkSize = TARGET_CHUNK_SIZE / bytesPerSecond;
-
-	// Use the more restrictive limit (whichever requires smaller chunks)
-	const targetDurationPerChunk = Math.min(durationBasedChunkSize, TARGET_DURATION);
-
+export function calculateSplitPoints(silencePeriods, duration, chunkDuration) {
 	const splitPoints = [];
 	let currentTime = 0;
 
 	while (currentTime < duration) {
-		const nextTargetTime = currentTime + targetDurationPerChunk;
+		const nextTargetTime = currentTime + chunkDuration;
 
 		if (nextTargetTime >= duration) {
 			break; // Last chunk
@@ -180,21 +157,14 @@ export async function splitAudioFile(audioFilePath, splitPoints) {
 }
 
 /**
- * Main function to split audio file if needed
+ * Main function to split audio file based on chunk duration
  * @param {string} audioFilePath - Path to the audio file
+ * @param {number} chunkDuration - Optional duration per chunk in seconds
  * @returns {Promise<Object>} Object containing chunk paths and whether splitting occurred
  */
-export async function splitAudioIfNeeded(audioFilePath) {
-	const fileStats = await stat(audioFilePath);
-	const fileSize = fileStats.size;
-
-	// Get audio duration first
-	const duration = await getAudioDuration(audioFilePath);
-
-	// Check if splitting is needed based on file size OR duration
-	const needsSplitting = fileSize > MAX_FILE_SIZE || duration > MAX_DURATION;
-
-	if (!needsSplitting) {
+export async function splitAudioIfNeeded(audioFilePath, chunkDuration) {
+	// If no chunk duration specified, don't split
+	if (!chunkDuration) {
 		return {
 			chunks: [audioFilePath],
 			wasSplit: false,
@@ -202,23 +172,29 @@ export async function splitAudioIfNeeded(audioFilePath) {
 		};
 	}
 
-	// Log the reason for splitting
-	if (fileSize > MAX_FILE_SIZE) {
-		console.log(`File size (${(fileSize / 1024 / 1024).toFixed(2)} MB) exceeds 25 MB limit. Splitting audio...`);
-	}
-	if (duration > MAX_DURATION) {
-		console.log(`Audio duration (${duration.toFixed(2)} seconds) exceeds ${MAX_DURATION} seconds limit. Splitting audio...`);
+	// Get audio duration
+	const duration = await getAudioDuration(audioFilePath);
+
+	// Check if splitting is needed (audio longer than chunk duration)
+	if (duration <= chunkDuration) {
+		console.log(`Audio duration (${duration.toFixed(2)}s) is shorter than chunk duration (${chunkDuration}s). No splitting needed.`);
+		return {
+			chunks: [audioFilePath],
+			wasSplit: false,
+			originalFile: audioFilePath
+		};
 	}
 
-	// Detect silence periods
+	console.log(`Splitting audio into chunks of ${chunkDuration} seconds...`);
+	console.log(`Audio duration: ${duration.toFixed(2)} seconds`);
+
+	// Detect silence periods for natural break points
 	console.log('Detecting silence periods...');
 	const silencePeriods = await detectSilence(audioFilePath);
 	console.log(`Found ${silencePeriods.length} silence periods`);
 
-	console.log(`Audio duration: ${duration.toFixed(2)} seconds`);
-
 	// Calculate split points
-	const splitPoints = await calculateSplitPoints(audioFilePath, silencePeriods, duration);
+	const splitPoints = calculateSplitPoints(silencePeriods, duration, chunkDuration);
 	console.log(`Splitting into ${splitPoints.length + 1} chunks`);
 
 	// Split the audio file

@@ -95,8 +95,9 @@ describe('whisperTranscribe', () => {
 		const lang = 'en';
 		const format = 'text';
 		const model = 'gpt-4o-transcribe';
+		const chunkDuration = undefined;
 
-		await whisperTranscribe(audioFilePath, outputPath, lang, format, model);
+		await whisperTranscribe(audioFilePath, outputPath, lang, format, model, chunkDuration);
 
 		expect(console.log).toHaveBeenCalledWith('Start transcribing...');
 		expect(openai.audio.transcriptions.create).toHaveBeenCalledWith({
@@ -122,8 +123,9 @@ describe('whisperTranscribe', () => {
 		const lang = 'en';
 		const format = 'text';
 		const model = 'gpt-4o-transcribe';
+		const chunkDuration = undefined;
 
-		await whisperTranscribe(audioFilePath, outputPath, lang, format, model);
+		await whisperTranscribe(audioFilePath, outputPath, lang, format, model, chunkDuration);
 
 		expect(console.log).toHaveBeenCalledWith('API Error');
 		expect(process.exit).toHaveBeenCalledWith(1);
@@ -138,8 +140,9 @@ describe('whisperTranscribe', () => {
 		const lang = 'uk';
 		const format = 'json';
 		const model = 'gpt-4o-transcribe';
+		const chunkDuration = undefined;
 
-		await whisperTranscribe(audioFilePath, outputPath, lang, format, model);
+		await whisperTranscribe(audioFilePath, outputPath, lang, format, model, chunkDuration);
 
 		expect(fs.createReadStream).toHaveBeenCalledWith(audioFilePath);
 	});
@@ -153,8 +156,9 @@ describe('whisperTranscribe', () => {
 		const lang = 'uk';
 		const format = 'srt';
 		const model = 'gpt-4o-transcribe';
+		const chunkDuration = undefined;
 
-		await whisperTranscribe(audioFilePath, outputPath, lang, format, model);
+		await whisperTranscribe(audioFilePath, outputPath, lang, format, model, chunkDuration);
 
 		expect(openai.audio.transcriptions.create).toHaveBeenCalledWith(
 			expect.objectContaining({
@@ -164,5 +168,34 @@ describe('whisperTranscribe', () => {
 				prompt: '',
 			})
 		);
+	});
+
+	it('should split audio when chunk duration is specified', async () => {
+		const { splitAudioIfNeeded } = await import('./utils/audioSplitter.js');
+		const mockTranscription1 = 'First chunk text';
+		const mockTranscription2 = 'Second chunk text';
+
+		openai.audio.transcriptions.create
+			.mockResolvedValueOnce(mockTranscription1)
+			.mockResolvedValueOnce(mockTranscription2);
+
+		// Mock splitAudioIfNeeded to return multiple chunks
+		splitAudioIfNeeded.mockResolvedValueOnce({
+			chunks: ['/path/to/chunk1.mp3', '/path/to/chunk2.mp3'],
+			wasSplit: true,
+			originalFile: '/path/to/audio.mp3'
+		});
+
+		const audioFilePath = '/path/to/audio.mp3';
+		const outputPath = '/path/to/output.txt';
+		const lang = 'en';
+		const format = 'text';
+		const model = 'gpt-4o-transcribe';
+		const chunkDuration = 600; // 10 minutes
+
+		await whisperTranscribe(audioFilePath, outputPath, lang, format, model, chunkDuration);
+
+		expect(splitAudioIfNeeded).toHaveBeenCalledWith(audioFilePath, chunkDuration);
+		expect(openai.audio.transcriptions.create).toHaveBeenCalledTimes(2);
 	});
 });
