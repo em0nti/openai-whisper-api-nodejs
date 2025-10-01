@@ -130,7 +130,4 @@ dist
 .pnp.*
 
 .idea
-
-*.wav
-*.mp3
-transcription.txt
+.DS_Store
