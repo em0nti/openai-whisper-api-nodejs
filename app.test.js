@@ -94,8 +94,9 @@ describe('whisperTranscribe', () => {
 		const outputPath = '/path/to/output.txt';
 		const lang = 'en';
 		const format = 'text';
+		const model = 'gpt-4o-transcribe';
 
-		await whisperTranscribe(audioFilePath, outputPath, lang, format);
+		await whisperTranscribe(audioFilePath, outputPath, lang, format, model);
 
 		expect(console.log).toHaveBeenCalledWith('Start transcribing...');
 		expect(openai.audio.transcriptions.create).toHaveBeenCalledWith({
@@ -120,8 +121,9 @@ describe('whisperTranscribe', () => {
 		const outputPath = '/path/to/output.txt';
 		const lang = 'en';
 		const format = 'text';
+		const model = 'gpt-4o-transcribe';
 
-		await whisperTranscribe(audioFilePath, outputPath, lang, format);
+		await whisperTranscribe(audioFilePath, outputPath, lang, format, model);
 
 		expect(console.log).toHaveBeenCalledWith('API Error');
 		expect(process.exit).toHaveBeenCalledWith(1);
@@ -135,8 +137,9 @@ describe('whisperTranscribe', () => {
 		const outputPath = '/path/to/output.txt';
 		const lang = 'uk';
 		const format = 'json';
+		const model = 'gpt-4o-transcribe';
 
-		await whisperTranscribe(audioFilePath, outputPath, lang, format);
+		await whisperTranscribe(audioFilePath, outputPath, lang, format, model);
 
 		expect(fs.createReadStream).toHaveBeenCalledWith(audioFilePath);
 	});
@@ -149,8 +152,9 @@ describe('whisperTranscribe', () => {
 		const outputPath = '/path/to/output.txt';
 		const lang = 'uk';
 		const format = 'srt';
+		const model = 'gpt-4o-transcribe';
 
-		await whisperTranscribe(audioFilePath, outputPath, lang, format);
+		await whisperTranscribe(audioFilePath, outputPath, lang, format, model);
 
 		expect(openai.audio.transcriptions.create).toHaveBeenCalledWith(
 			expect.objectContaining({

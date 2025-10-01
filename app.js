@@ -18,6 +18,7 @@ transcribe
 	.argument('[output-path]', 'Optional path to the destination where the text file will be saved')
 	.option('--lang <language>', 'Set the language of the audio content', 'uk')
 	.option('--format <format>', 'Define the output format of the transcription', 'text')
+	.option('--model <model>', 'Set the transcription model (gpt-4o-transcribe, gpt-4o-mini-transcribe, whisper-1)', 'gpt-4o-transcribe')
 	.action((audioFilePath, outputPath, options) => {
 		const absoluteAudioFilePath = path.resolve(audioFilePath);
 		const audioFileExtName = path.extname(audioFilePath);
@@ -34,8 +35,9 @@ transcribe
 		console.log(`Transcribing file: ${audioFilePath}`);
 		console.log(`Language: ${options.lang}`);
 		console.log(`Format: ${options.format}`);
+		console.log(`Model: ${options.model}`);
 
-		whisperTranscribe(absoluteAudioFilePath, textFilePath, options.lang, options.format);
+		whisperTranscribe(absoluteAudioFilePath, textFilePath, options.lang, options.format, options.model);
 	});
 
 // Parse the command-line arguments only if this file is run directly
@@ -57,11 +59,11 @@ export const writeTextToFile = (text, destinationPath) => {
 /**
  * Transcribes a single audio chunk
  */
-async function transcribeChunk(audioFilePath, lang, format) {
+async function transcribeChunk(audioFilePath, lang, format, model) {
 	const prompt = '';
 	const transcription = await openai.audio.transcriptions.create({
 		file: fs.createReadStream(audioFilePath),
-		model: 'gpt-4o-transcribe',
+		model: model,
 		language: lang,
 		prompt: prompt,
 		response_format: format,
@@ -72,7 +74,7 @@ async function transcribeChunk(audioFilePath, lang, format) {
 /**
  * Main transcription function with automatic audio splitting for large files
  */
-export async function whisperTranscribe(audioFilePath, outputPath, lang, format) {
+export async function whisperTranscribe(audioFilePath, outputPath, lang, format, model) {
 	try {
 		console.log('Start transcribing...');
 
@@ -87,7 +89,7 @@ export async function whisperTranscribe(audioFilePath, outputPath, lang, format)
 			// Transcribe each chunk
 			for (let i = 0; i < chunks.length; i++) {
 				console.log(`Transcribing chunk ${i + 1}/${chunks.length}...`);
-				const chunkTranscription = await transcribeChunk(chunks[i], lang, format);
+				const chunkTranscription = await transcribeChunk(chunks[i], lang, format, model);
 
 				// For text format, concatenate with spacing
 				if (format === 'text') {
@@ -103,7 +105,7 @@ export async function whisperTranscribe(audioFilePath, outputPath, lang, format)
 			await cleanupChunks(chunks, originalFile);
 		} else {
 			// Single file transcription (original behavior)
-			finalTranscription = await transcribeChunk(audioFilePath, lang, format);
+			finalTranscription = await transcribeChunk(audioFilePath, lang, format, model);
 		}
 
 		writeTextToFile(finalTranscription, outputPath);
